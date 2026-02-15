@@ -1,44 +1,70 @@
-## hp-wmi manual fan + keyboard RGB control
+# hp-wmi — Manual Fan Control & Keyboard RGB for HP Laptops
 
-This is an Initial module for manual fan control and keyboard RGB for devices that support it. Single‑zone RGB works now; I plan to add 4‑zone but I need testers. I also plan to upstream this module, but i need to be sure that the module is stable enough before upstreaming it.
+A Linux kernel module that adds manual fan speed control and keyboard RGB backlight support for HP Omen, Victus, and similar laptops.
 
-Please star the repo if this driver works for you. Thanks!
+> Based on the upstream [hp-wmi driver](https://github.com/TUXOV/hp-wmi-fan-and-backlight-control) by [TUXOV](https://github.com/TUXOV). All credit for the original implementation goes to the upstream maintainer.
+
+**Please ⭐ star the repo if this driver works for you!**
+
+## Features
+
+- 🌀 **Manual fan speed control** — set custom RPM via hwmon interface
+- 🔄 **Fan mode switching** — Automatic / Manual / Max via `pwm1_enable`
+- 🎨 **Keyboard RGB backlight** — single-zone & 4-zone via LED multicolor interface
+- 📊 **Performance profiles** — `performance` / `balanced` / `low-power` integrated with `power-profiles-daemon` (GNOME/KDE)
+- ⌨️ **Fn+P hotkey** — cycle performance profiles from the keyboard
 
 > [!NOTE]
-> **HP Victus 15:** For some reason, HP didnt mark manual fan control supported on HP Victus 15 laptops, even though the hardware supports it. So by default manual fan control is not enabled in this module. But if you want to turn it on, load the module with the `force_fan_control_support=true` parameter.
->
+> **HP Victus 15:** HP didn't mark manual fan control as supported on these laptops, even though the hardware supports it. Load the module with:
 > ```bash
 > sudo insmod hp-wmi.ko force_fan_control_support=true
 > ```
 
-### GUI
-There's a gui for this driver. I plan to rewrite it when i have free time but it should be enough for now. see [victus-control](https://github.com/Vilez0/victus-control)
+## Installation
 
-### Installation:
+### Quick Install (All Distros)
 
-Dkms:
+The included `install.sh` script auto-detects your distro, installs dependencies, and sets up DKMS:
+
+```bash
+git clone https://github.com/TUXOV/hp-wmi-fan-and-backlight-control
+cd hp-wmi-fan-and-backlight-control
+sudo ./install.sh
 ```
+
+Supported distros: **Ubuntu/Debian**, **Fedora/RHEL**, **Arch/Manjaro**, **openSUSE**, **Void**, **Gentoo**, and derivatives.
+
+To uninstall:
+```bash
+sudo ./install.sh uninstall
+```
+
+### Manual DKMS Install
+
+```bash
 git clone https://github.com/TUXOV/hp-wmi-fan-and-backlight-control
 cd hp-wmi-fan-and-backlight-control
 make
 sudo make install-dkms
 ```
 
-Arch package:
-```
+### Arch Linux (AUR)
+
+```bash
 git clone https://github.com/TUXOV/hp-wmi-fan-and-backlight-control
 cd hp-wmi-fan-and-backlight-control
 make install-arch
 ```
 
-NixOS module:
+### NixOS
 
-In your system flake, add the repo as an input and enable the module:
+Add the repo as a flake input:
+
 ```nix
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    hp-wmi-control.url = "github:TUXOV/hp-wmi-fan-and-backlight-control"; # or a local path
+    hp-wmi-control.url = "github:TUXOV/hp-wmi-fan-and-backlight-control";
   };
   outputs = { self, nixpkgs, hp-wmi-control, ... }: {
     nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
@@ -49,7 +75,7 @@ In your system flake, add the repo as an input and enable the module:
         {
           hardware.hp-wmi-control = {
             enable = true;
-            # victus-15-support.enable = true; # To add optional Victus 15 support
+            # victus-15-support.enable = true;
           };
         }
       ];
@@ -58,38 +84,82 @@ In your system flake, add the repo as an input and enable the module:
 }
 ```
 
-or if you just want to test the module (not permanent):
+### Temporary Install (Testing Only)
+
 ```bash
 git clone https://github.com/TUXOV/hp-wmi-fan-and-backlight-control
-cd hp-wmi-fan-and-backlight-control/
+cd hp-wmi-fan-and-backlight-control
 make
 sudo rmmod hp-wmi
 sudo modprobe led_class_multicolor
 sudo insmod hp-wmi.ko
 ```
 
-### Usage 
-- Keyboard (single‑zone RGB): control under `/sys/class/leds/hp::kbd_backlight`.
-  - Use the multicolor interface attribute `multi_intensity` which accepts `R G B` (0–255 each).
-  - Example:
-    ```bash
-    echo "255 0 0" | sudo tee /sys/class/leds/hp::kbd_backlight/multi_intensity # Set to red
-    echo 128 | sudo tee /sys/class/leds/hp::kbd_backlight/brightness # Change brightness to 50% (0-255)
-    ```
+## Usage
 
-- Fans: control via `fanX_target` files (check fanX_max for the max values. Anything above the max values will return -EINVAL).
-    ```bash
-    echo 5500 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/fan1_target  # will set fan1 to 5500 rpm
-    echo 5200 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/fan2_target # will set fan2 to 5200 rpm
-    ```
+### Fan Control
 
-- Fn+P Shortcut: On laptops that support it, the Fn+P shortcut for switching performance profiles should work OOTB. You can verify if its working by monitoring the `/sys/firmware/acpi/platform_profile` file.
+Fan mode is controlled via `pwm1_enable`:
 
-### Tested on:
-- Victus 16‑s1 (9Z791EA) — tested by me.
-- I need testers to report which models it works on or not. see https://github.com/TUXOV/hp-wmi-fan-and-backlight-control/issues/1
+| Value | Mode | Description |
+|-------|------|-------------|
+| `0` | **Max** | All fans at maximum speed |
+| `1` | **Manual** | Set custom RPM targets |
+| `2` | **Auto** | BIOS controls fans based on temperature |
 
-### Disclaimer
-USE IT AT YOUR OWN RISK. I DO NOT ACCEPT ANY RESPONSIBILITY.
+```bash
+# Switch to manual mode
+echo 1 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/pwm1_enable
 
+# Set fan speeds (check fan*_max for limits)
+echo 5500 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/fan1_target
+echo 5200 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/fan2_target
 
+# Return to automatic mode
+echo 2 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/pwm1_enable
+```
+
+> [!TIP]
+> Check `fan*_max` for maximum allowed RPM values. Values exceeding the limit return `-EINVAL`.
+
+### Keyboard Backlight (RGB)
+
+```bash
+# Set color (R G B, 0-255 each)
+echo "255 0 0" | sudo tee /sys/class/leds/hp::kbd_backlight/multi_intensity
+
+# Set brightness (0-255)
+echo 128 | sudo tee /sys/class/leds/hp::kbd_backlight/brightness
+```
+
+### Performance Profiles
+
+Integrated with `power-profiles-daemon` — change profiles from GNOME/KDE power settings or via command line:
+
+```bash
+cat /sys/firmware/acpi/platform_profile              # Current profile
+cat /sys/firmware/acpi/platform_profile_choices       # Available profiles
+
+echo performance | sudo tee /sys/firmware/acpi/platform_profile
+echo balanced    | sudo tee /sys/firmware/acpi/platform_profile
+echo low-power   | sudo tee /sys/firmware/acpi/platform_profile
+```
+
+**Fn+P** keyboard shortcut also cycles through profiles.
+
+## Tested On
+
+- Victus 16‑s1 (9Z791EA)
+- More testers needed! See [#1](https://github.com/TUXOV/hp-wmi-fan-and-backlight-control/issues/1)
+
+## GUI
+
+There's a GUI for this driver: [victus-control](https://github.com/Vilez0/victus-control)
+
+## License
+
+GPL-2.0-or-later — see [LICENSE](LICENSE)
+
+## Disclaimer
+
+**USE AT YOUR OWN RISK. THE AUTHORS ACCEPT NO RESPONSIBILITY FOR ANY DAMAGES.**

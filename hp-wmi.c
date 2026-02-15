@@ -766,18 +766,6 @@ static int hp_wmi_set_fan_speed(int fan, int fan_speed)
 	return ret;
 }
 
-static int hp_wmi_fan_speed_max_reset(void)
-{
-	int ret;
-
-	ret = hp_wmi_fan_speed_max_set(0);
-	if (ret)
-		return ret;
-
-	/* Disabling max fan speed on Victus s1xxx laptops needs a 2nd step: */
-	ret = hp_wmi_fan_speed_reset();
-	return ret;
-}
 
 
 static int __init hp_wmi_manual_fan_init(void)
@@ -2031,7 +2019,8 @@ static int platform_profile_victus_s_set_ec(enum platform_profile_option profile
 		return -EOPNOTSUPP;
 	}
 
-	hp_wmi_get_fan_count_userdefine_trigger();
+	if (hp_fan_control.mode != HP_FAN_MODE_AUTOMATIC)
+		hp_wmi_get_fan_count_userdefine_trigger();
 
 	err = omen_thermal_profile_set(tp);
 	if (err < 0) {
@@ -2597,8 +2586,11 @@ static int hp_wmi_hwmon_write(struct device *dev, enum hwmon_sensor_types type,
 		switch (val) {
 		case 0:
 			hp_fan_control.mode = HP_FAN_MODE_MAX;
-			if (is_victus_s_thermal_profile())
+			if (is_victus_s_thermal_profile()) {
 				hp_wmi_get_fan_count_userdefine_trigger();
+				schedule_delayed_work(&hp_fan_control.victus_s_thermal_profile_trigger_work,
+						     secs_to_jiffies(HP_VICTUS_S_THERMAL_PROFILE_TIMER_SECONDS));
+			}
 
 			memcpy(hp_fan_control.target_rpms,
 			       hp_fan_control.max_rpms,
@@ -2606,23 +2598,31 @@ static int hp_wmi_hwmon_write(struct device *dev, enum hwmon_sensor_types type,
 			return hp_wmi_fan_speed_max_set(1);
 		case 1:
 			hp_fan_control.mode = HP_FAN_MODE_MANUAL;
-			if (is_victus_s_thermal_profile())
+			if (is_victus_s_thermal_profile()) {
 				hp_wmi_get_fan_count_userdefine_trigger();
+				schedule_delayed_work(&hp_fan_control.victus_s_thermal_profile_trigger_work,
+						     secs_to_jiffies(HP_VICTUS_S_THERMAL_PROFILE_TIMER_SECONDS));
+			}
 			return 0;
 		case 2:
 			hp_fan_control.mode = HP_FAN_MODE_AUTOMATIC;
 			hp_fan_control.target_rpms[0] = hp_fan_control.target_rpms[1] = -1;
 			if (is_victus_s_thermal_profile()) {
-				hp_wmi_get_fan_count_userdefine_trigger();
-				return hp_wmi_fan_speed_max_reset();
-			} else
-				return hp_wmi_fan_speed_max_set(0);
+				cancel_delayed_work_sync(&hp_fan_control.victus_s_thermal_profile_trigger_work);
+				hp_wmi_fan_speed_max_set(0);
+				hp_wmi_fan_speed_reset();
+				return platform_profile_victus_s_set_ec(active_platform_profile);
+			} else {
+				hp_wmi_fan_speed_max_set(0);
+				hp_wmi_fan_speed_reset();
+				return platform_profile_victus_set_ec(active_platform_profile);
+			}
 		default:
 			return -EINVAL;
 		}
 		break;
 	case hwmon_fan:
-		if (val > hp_fan_control.max_rpms[channel] && !force_fan_control_support || val < 0)
+		if ((val > hp_fan_control.max_rpms[channel] && !force_fan_control_support) || val < 0)
 			return -EINVAL;
 		if (hp_fan_control.have_manual_control) {
 			if (is_victus_s_thermal_profile())

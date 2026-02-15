@@ -1,13 +1,26 @@
+# Build artifacts
 *.ko
-*.mod.c
-*.order.c
-*.symvers.c
-.*.cmd
 *.o
 *.mod
+*.mod.c
+*.order
+*.symvers
+*.unsigned
+.*.cmd
+.*.o
+.tmp_versions/
 Module.symvers
 modules.order
+
+# Packaging
 pkg/
-*.pkg.tar.zst
-.vscode
 src/
+*.pkg.tar.zst
+*.pkg.tar.xz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
