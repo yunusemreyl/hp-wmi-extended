@@ -150,11 +150,12 @@ echo low-power   | sudo tee /sys/firmware/acpi/platform_profile
 ## Tested On
 
 - Victus 16‑s1 (9Z791EA)
+- Victus 16‑r0053nt (i5‑13500H, RTX 4050) — *Tested by yunusemreyl*
 - More testers needed! See [#1](https://github.com/TUXOV/hp-wmi-fan-and-backlight-control/issues/1)
 
 ## GUI
 
-There's a GUI for this driver: [victus-control](https://github.com/Vilez0/victus-control)
+A new GUI for this driver is coming soon! Stay tuned.
 
 ## License
 
