@@ -1,5 +1,5 @@
 {
-  description = "Install the hp-wmi-fan-and-backlight-control kernel modules on NixOS";
+  description = "Install the patched hp-wmi kernel module on NixOS for manual fan control";
 
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
@@ -22,7 +22,7 @@
           nix-gitignore,
         }:
         stdenv.mkDerivation (finalAttrs: {
-          pname = "hp-wmi-fan-and-backlight-control";
+          pname = "hp-wmi-patched";
           inherit version;
           src = lib.cleanSource (
             nix-gitignore.gitignoreSourcePure [
@@ -46,8 +46,8 @@
           installFlags = [ "INSTALL_MOD_PATH=$(out)" ];
 
           meta = {
-            description = "Linux kernel module for HP Laptops";
-            homepage = "https://github.com/Vilez0/hp-wmi-fan-and-backlight-control";
+            description = "Linux kernel module for HP Laptops (manual fan control and profiles)";
+            homepage = "https://github.com/yunusemreyl/hp-wmi-extended";
             license = lib.licenses.gpl2;
             maintainers = with lib.maintainers; [ ern775 ];
             platforms = lib.platforms.linux;
@@ -56,27 +56,27 @@
     in
     {
       packages.${system} = {
-        default = self.packages.${system}.hp-wmi-control;
-        hp-wmi-control = module;
+        default = self.packages.${system}.hp-wmi-patched;
+        hp-wmi-patched = module;
       };
 
       nixosModules.default = (
         { config, lib, ... }:
         let
           inherit (lib) mkEnableOption mkIf;
-          cfg = config.hardware.hp-wmi-control;
+          cfg = config.hardware.hp-wmi-patched;
           callPackage = config.boot.kernelPackages.callPackage;
         in
         {
           options = {
-            hardware.hp-wmi-control = {
-              enable = mkEnableOption "Enable the hp-wmi-fan-and-backlight-control kernel module";
+            hardware.hp-wmi-patched = {
+              enable = mkEnableOption "Enable the patched hp-wmi kernel module";
               victus-15-support.enable = mkEnableOption "Enable forced manual fan control support for Victus 15 laptops";
             };
           };
           config = mkIf cfg.enable {
             boot.extraModulePackages = [
-              (callPackage self.packages.${system}.hp-wmi-control { })
+              (callPackage self.packages.${system}.hp-wmi-patched { })
             ];
             boot.extraModprobeConfig = mkIf cfg.victus-15-support.enable ''
               options hp-wmi force_fan_control_support=true

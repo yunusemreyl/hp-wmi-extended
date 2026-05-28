@@ -1,81 +1,102 @@
-# hp-wmi — Manual Fan Control & Keyboard RGB for HP Laptops
+# 🌀 HP-WMI-Extended
 
-A Linux kernel module that adds manual fan speed control and keyboard RGB backlight support for HP Omen, Victus, and similar laptops.
+<p align="center">
+  <strong>An advanced, patched Linux kernel module for HP Omen, Victus, and companion laptops, unlocking full manual fan speed controls and seamless platform performance profile integration.</strong>
+</p>
 
-> Based on the upstream [hp-wmi driver](https://github.com/TUXOV/hp-wmi-fan-and-backlight-control) by [TUXOV](https://github.com/TUXOV). All credit for the original implementation goes to the upstream maintainer.
+<p align="center">
+  <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html">
+    <img src="https://img.shields.io/badge/License-GPL%20v2-blue.svg?style=for-the-badge" alt="License: GPL v2">
+  </a>
+  <a href="#">
+    <img src="https://img.shields.io/badge/Kernel-5.x%20%7C%206.x%20%7C%207.x-success.svg?style=for-the-badge" alt="Kernel Compatibility">
+  </a>
+  <a href="#">
+    <img src="https://img.shields.io/badge/Platform-Linux-orange.svg?style=for-the-badge" alt="Platform: Linux">
+  </a>
+  <a href="#">
+    <img src="https://img.shields.io/badge/DKMS-Automated-brightgreen.svg?style=for-the-badge" alt="DKMS Supported">
+  </a>
+</p>
 
-**Please ⭐ star the repo if this driver works for you!**
+---
 
-## Features
+## ⚡ Introduction
 
-- 🌀 **Manual fan speed control** — set custom RPM via hwmon interface
-- 🔄 **Fan mode switching** — Automatic / Manual / Max via `pwm1_enable`
-- 🎨 **Keyboard RGB backlight** — single-zone & 4-zone via LED multicolor interface
-- 📊 **Performance profiles** — `performance` / `balanced` / `low-power` integrated with `power-profiles-daemon` (GNOME/KDE)
-- ⌨️ **Fn+P hotkey** — cycle performance profiles from the keyboard
+The default Linux kernel `hp-wmi` driver leaves a lot of performance on the table. This **extended** variant is fully patched to expose deep hardware registers inside the ACPI Embedded Controller (EC) of your HP laptop. 
+
+It provides real-time cooling override capabilities, enabling you to switch thermal profiles, use custom RPM fan targets, and keep your laptop running exceptionally cool during heavy gaming or compilation workloads.
 
 > [!NOTE]
-> **HP Victus 15:** HP didn't mark manual fan control as supported on these laptops, even though the hardware supports it. Load the module with:
-> ```bash
-> sudo insmod hp-wmi.ko force_fan_control_support=true
-> ```
+> *Based on the original upstream [hp-wmi driver](https://github.com/TUXOV/hp-wmi-fan-and-backlight-control). All credit for deciphering the ACPI WMI communication commands belongs to the upstream project.*
 
-## Installation
+---
 
-### Quick Install (All Distros)
+## ✨ Core Features
 
-The included `install.sh` script auto-detects your distro, installs dependencies, and sets up DKMS:
+*   🌀 **Manual Fan Speed Control** — Bypass BIOS locks to assign precise RPM targets.
+*   🔄 **Dynamic Mode Switching** — Toggle between **Auto**, **Manual**, and **Max** cooling profiles on the fly.
+*   📊 **Platform Profiles Integration** — Fully integrated with Linux ACPI platform profiles. Changes sync instantly with `power-profiles-daemon` (GNOME/KDE system power menus).
+*   ⌨️ **Physical Key Mapping** — Native listener for the **Fn+P** performance switch hotkey and the dedicated **OMEN** dashboard key.
+*   🛠️ **DKMS Automated Rebuilds** — Automatically compiles and loads itself whenever you update your Linux kernel.
+
+---
+
+## 🔧 Installation
+
+This driver supports all major Linux distributions, including **Arch Linux / Manjaro**, **Ubuntu / Debian**, **Fedora / RHEL**, **openSUSE**, **Void Linux**, and **Gentoo**.
+
+### 1. Quick Install (All Distros)
+
+The included interactive `setup.sh` automatically installs system compilation tools and kernel headers, backs up the stock `hp-wmi.ko` driver, compiles the patched module, registers it with DKMS, and loads it into the kernel:
 
 ```bash
-git clone https://github.com/yunusemreyl/hp-wmi-fan-and-backlight-control
-cd hp-wmi-fan-and-backlight-control
-sudo ./install.sh
+git clone https://github.com/yunusemreyl/hp-wmi-extended
+cd hp-wmi-extended
+sudo ./setup.sh
 ```
 
-Supported distros: **Ubuntu/Debian**, **Fedora/RHEL**, **Arch/Manjaro**, **openSUSE**, **Void**, **Gentoo**, and derivatives.
+### 2. Manual DKMS Installation
 
-To uninstall:
-```bash
-sudo ./install.sh uninstall
-```
-
-### Manual DKMS Install
+If you prefer to register the source directory with DKMS manually:
 
 ```bash
-git clone https://github.com/yunusemreyl/hp-wmi-fan-and-backlight-control
-cd hp-wmi-fan-and-backlight-control
+git clone https://github.com/yunusemreyl/hp-wmi-extended
+cd hp-wmi-extended
 make
 sudo make install-dkms
 ```
 
-### Arch Linux (AUR)
+### 3. Arch Linux (AUR)
+
+Generate and install the package locally using `makepkg`:
 
 ```bash
-git clone https://github.com/yunusemreyl/hp-wmi-fan-and-backlight-control
-cd hp-wmi-fan-and-backlight-control
+git clone https://github.com/yunusemreyl/hp-wmi-extended
+cd hp-wmi-extended
 make install-arch
 ```
 
-### NixOS
+### 4. NixOS Integration
 
-Add the repo as a flake input:
+To integrate this driver directly into your NixOS configuration, declare this repository in your flake inputs:
 
 ```nix
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    hp_wmi_control.url = "github:yunusemreyl/hp-wmi-fan-and-backlight-control";
+    hp_wmi_extended.url = "github:yunusemreyl/hp-wmi-extended";
   };
-  outputs = { self, nixpkgs, hp_wmi_control, ... }: {
+  outputs = { self, nixpkgs, hp_wmi_extended, ... }: {
     nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
         ./configuration.nix
-        hp_wmi_control.nixosModules.default
+        hp_wmi_extended.nixosModules.default
         {
-          hardware.hp-wmi-control = {
+          hardware.hp-wmi-patched = {
             enable = true;
-            # victus-15-support.enable = true;
+            # victus-15-support.enable = true; # Force Victus 15 manual fan control
           };
         }
       ];
@@ -84,83 +105,75 @@ Add the repo as a flake input:
 }
 ```
 
-### Temporary Install (Testing Only)
+---
+
+## 🎮 How to Use
+
+### 1. Fan Controller API
+
+The driver exposes a standard Linux `hwmon` interface. You manage cooling states by writing to `pwm1_enable`:
+
+| Value | Mode | Behavior |
+| :---: | :--- | :--- |
+| **`0`** | 🔴 **Max** | Disables BIOS controls; forces all fans to run at maximum hardware RPM. |
+| **`1`** | 🟡 **Manual** | Bypasses BIOS target calculations; allows custom RPM speeds via the target sysfs nodes. |
+| **`2`** | 🟢 **Auto** | Re-delegates fan control back to the motherboard BIOS (standard factory state). |
 
 ```bash
-git clone https://github.com/yunusemreyl/hp-wmi-fan-and-backlight-control
-cd hp-wmi-fan-and-backlight-control
-make
-sudo rmmod hp-wmi
-sudo modprobe led_class_multicolor
-sudo insmod hp-wmi.ko
-```
-
-## Usage
-
-### Fan Control
-
-Fan mode is controlled via `pwm1_enable`:
-
-| Value | Mode | Description |
-|-------|------|-------------|
-| `0` | **Max** | All fans at maximum speed |
-| `1` | **Manual** | Set custom RPM targets |
-| `2` | **Auto** | BIOS controls fans based on temperature |
-
-```bash
-# Switch to manual mode
+# Step 1: Switch the fan controller to manual mode
 echo 1 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/pwm1_enable
 
-# Set fan speeds (check fan*_max for limits)
+# Step 2: Set exact cooling RPM targets (verify your fan*_max RPM first)
 echo 5500 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/fan1_target
 echo 5200 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/fan2_target
 
-# Return to automatic mode
+# Step 3: Revert back to motherboard automatic control
 echo 2 | sudo tee /sys/devices/platform/hp-wmi/hwmon/hwmon*/pwm1_enable
 ```
 
 > [!TIP]
-> Check `fan*_max` for maximum allowed RPM values. Values exceeding the limit return `-EINVAL`.
+> Use `cat /sys/devices/platform/hp-wmi/hwmon/hwmon*/fan*_max` to find the hardware limit of your cooling fans. Writing an RPM target above this limit will safely return `-EINVAL`.
 
-### Keyboard Backlight (RGB)
+### 2. Thermal & Performance Profiles
 
-```bash
-# Set color (R G B, 0-255 each)
-echo "255 0 0" | sudo tee /sys/class/leds/hp::kbd_backlight/multi_intensity
-
-# Set brightness (0-255)
-echo 128 | sudo tee /sys/class/leds/hp::kbd_backlight/brightness
-```
-
-### Performance Profiles
-
-Integrated with `power-profiles-daemon` — change profiles from GNOME/KDE power settings or via command line:
+Switch between ACPI power profiles, which coordinates power limits, CPU clock boosts, and cooling curves in unison:
 
 ```bash
-cat /sys/firmware/acpi/platform_profile              # Current profile
-cat /sys/firmware/acpi/platform_profile_choices       # Available profiles
+# Query the active performance profile
+cat /sys/firmware/acpi/platform_profile
 
+# List available ACPI profile modes
+cat /sys/firmware/acpi/platform_profile_choices
+
+# Switch performance profiles manually
 echo performance | sudo tee /sys/firmware/acpi/platform_profile
 echo balanced    | sudo tee /sys/firmware/acpi/platform_profile
 echo low-power   | sudo tee /sys/firmware/acpi/platform_profile
 ```
 
-**Fn+P** keyboard shortcut also cycles through profiles.
+*Note: Pressing the physical **Fn+P** key combination on your keyboard will cycle through these profiles automatically.*
 
-## Tested On
+---
 
-- Victus 16‑s1 (9Z791EA)
-- Victus 16‑r0053nt (i5‑13500H, RTX 4050) — *Tested by yunusemreyl*
-- More testers needed! See [#1](https://github.com/TUXOV/hp-wmi-fan-and-backlight-control/issues/1)
+## ⚠️ Hardware Workarounds
 
-## GUI
+> [!WARNING]
+> **HP Victus 15 Models:** 
+> HP has disabled manual fan speed controls on the Victus 15 BIOS at a firmware level, even though the hardware registers are present. To force manual fan support bypasses, pass the override parameter when loading:
+> ```bash
+> sudo insmod hp-wmi.ko force_fan_control_support=true
+> ```
 
-A new GUI for this driver is coming soon! Stay tuned.
+---
 
-## License
+## 💻 Tested Hardware
 
-GPL-2.0-or-later — see [LICENSE](LICENSE)
+This patched module is verified to compile, load, and run perfectly on:
+-   OmenCtl [https://github.com/yunusemreyl/OmenCtl] users
 
-## Disclaimer
+---
 
-**USE AT YOUR OWN RISK. THE AUTHORS ACCEPT NO RESPONSIBILITY FOR ANY DAMAGES.**
+## 🛡️ License & Disclaimer
+
+*   **License:** Distributed under the **GPL-2.0-or-later** license. See the [LICENSE](LICENSE) file for details.
+*   **Disclaimer:** **USE AT YOUR OWN RISK.** Overriding hardware cooling limits or target thermal profiles can affect system stability. The authors hold no responsibility for any hardware damages.

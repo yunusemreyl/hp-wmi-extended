@@ -1,21 +1,26 @@
-
 # Module name
 obj-m += hp-wmi.o
 
 # Kernel build directory
 KDIR := /lib/modules/$(shell uname -r)/build
 
+PKGNAME := $(shell grep -oP 'PACKAGE_NAME="\K[^"]+' dkms.conf)
+VERSION := $(shell grep -oP 'PACKAGE_VERSION="\K[^"]+' dkms.conf)
+
 # Current directory
 PWD := $(shell pwd)
 
-# Get package info from dkms.conf
-DKMS_CONF := $(PWD)/dkms.conf
-PKGNAME := $(shell grep -oP 'PACKAGE_NAME="\K[^"]+' $(DKMS_CONF) 2>/dev/null)
-VERSION := $(shell grep -oP 'PACKAGE_VERSION="\K[^"]+' $(DKMS_CONF) 2>/dev/null)
+# Detect if the running kernel was compiled with Clang
+LLVM_DETECTED := $(shell grep -iq clang /proc/version && echo 1 || echo 0)
+LLVM ?= $(LLVM_DETECTED)
 
 # Default target
 all:
+ifeq ($(LLVM),1)
+	$(MAKE) LLVM=1 -C $(KDIR) M=$(PWD) modules
+else
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
+endif
 
 # Clean target
 clean:

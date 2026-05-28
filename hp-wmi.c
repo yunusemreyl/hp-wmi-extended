@@ -603,6 +603,10 @@ static inline int encode_outsize_for_pvsz(int outsize)
  * Returns zero on success, a positive HP WMI error code, or a negative
  * errno.  The buffersize must be at least max(insize, outsize).
  */
+/* Global mutex to prevent concurrent WMI evaluation across modules (e.g. RGB driver) */
+DEFINE_MUTEX(hp_wmi_mutex);
+EXPORT_SYMBOL_GPL(hp_wmi_mutex);
+
 static int hp_wmi_perform_query(int query, enum hp_wmi_command command,
 				void *buffer, int insize, int outsize)
 {
@@ -639,7 +643,9 @@ static int hp_wmi_perform_query(int query, enum hp_wmi_command command,
 	if (insize > 0)
 		memcpy(args->data, buffer, flex_array_size(args, data, insize));
 
+	mutex_lock(&hp_wmi_mutex);
 	ret = wmi_evaluate_method(HPWMI_BIOS_GUID, 0, mid, &input, &output);
+	mutex_unlock(&hp_wmi_mutex);
 	if (ret)
 		goto out_free;
 
@@ -1021,7 +1027,7 @@ static const struct rfkill_ops hp_wmi_rfkill2_ops = {
 
 static int hp_wmi_rfkill2_refresh(void)
 {
-	struct bios_rfkill2_state state;
+	struct bios_rfkill2_state state = { 0 };
 	int err, i;
 
 	err = hp_wmi_perform_query(HPWMI_WIRELESS2_QUERY, HPWMI_READ, &state,
@@ -1118,6 +1124,8 @@ static ssize_t als_store(struct device *dev, struct device_attribute *attr,
 	ret = kstrtou32(buf, 10, &tmp);
 	if (ret)
 		return ret;
+	if (tmp > 1)
+		return -EINVAL;
 
 	ret = hp_wmi_perform_query(HPWMI_ALS_QUERY, HPWMI_WRITE,
 				   &tmp, sizeof(tmp), 0);
@@ -1660,7 +1668,7 @@ register_wifi_error:
 
 static int __init hp_wmi_rfkill2_setup(struct platform_device *device)
 {
-	struct bios_rfkill2_state state;
+	struct bios_rfkill2_state state = { 0 };
 	int err, i;
 
 	err = hp_wmi_perform_query(HPWMI_WIRELESS2_QUERY, HPWMI_READ, &state,
@@ -2051,7 +2059,7 @@ static int victus_s_gpu_thermal_profile_get(bool *ctgp_enable,
 					    u8 *dstate,
 					    u8 *gpu_slowdown_temp)
 {
-	struct victus_gpu_power_modes gpu_power_modes;
+	struct victus_gpu_power_modes gpu_power_modes = { 0 };
 	int ret;
 
 	ret = hp_wmi_perform_query(HPWMI_GET_GPU_THERMAL_MODES_QUERY, HPWMI_GM,

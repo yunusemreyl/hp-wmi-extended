@@ -1,11 +1,11 @@
 # Maintainer: Vilez0 <aur at medip dotdev>
 
-_pkgbase=hp-wmi-fan-and-backlight-control
+_pkgbase=hp-wmi-patched
 pkgname=${_pkgbase}-dkms
 pkgver=$(grep -oP 'PACKAGE_VERSION="\K[^"]+' dkms.conf)
 pkgrel=0
-pkgdesc="Adds manual fan and keyboard backlight control to HP laptops on Linux"
-url="https://github.com/TUXOV/hp-wmi-fan-and-backlight-control"
+pkgdesc="Adds manual fan speed and performance profile control to HP laptops on Linux (patched hp-wmi)"
+url="https://github.com/yunusemreyl/hp-wmi-extended"
 license=("GPL")
 arch=('x86_64')
 depends=('glibc' 'dkms')
