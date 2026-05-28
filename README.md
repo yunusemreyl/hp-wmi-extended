@@ -28,7 +28,7 @@ The default Linux kernel `hp-wmi` driver leaves a lot of performance on the tabl
 It provides real-time cooling override capabilities, enabling you to switch thermal profiles, use custom RPM fan targets, and keep your laptop running exceptionally cool during heavy gaming or compilation workloads.
 
 > [!NOTE]
-> *Based on the original upstream [hp-wmi driver](https://github.com/TUXOV/hp-wmi-fan-and-backlight-control). All credit for deciphering the ACPI WMI communication commands belongs to the upstream project.*
+> *Based on the upstream and TUXOV's [hp-wmi driver](https://github.com/TUXOV/hp-wmi-fan-and-backlight-control). All credit for deciphering the ACPI WMI communication commands belongs to the upstream project.*
 
 ---
 
